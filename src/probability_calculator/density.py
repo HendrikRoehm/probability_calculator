@@ -1,7 +1,7 @@
 import math
 import itertools
-from typing import Optional, List
-from .outcome import Outcome, ExportedOutcome, DiscreteOutcome
+from typing import Optional, List, Union
+from .outcome import Outcome, ExportedOutcome, DiscreteOutcome, CombinedOutcome
 from .plot import plot_density
 
 
@@ -22,6 +22,22 @@ class DiscreteDensity:
         """
         return plot_density(self, **kwargs)
 
+    def _max_min_includes(self, o1: CombinedOutcome, o2: Outcome):
+        if isinstance(o2, DiscreteOutcome):
+            value = o2.get_value()
+            if value >= o1.min_value and value <= o1.max_value:
+                return True
+            elif abs(value - o1.get_value()) < 0.5:
+                return True
+
+        if isinstance(o2, CombinedOutcome):
+            if o2.min_value >= o1.min_value and o2.max_value <= o1.max_value:
+                return True
+            elif abs(o2.get_value() - o1.get_value()) < 0.5:
+                return True
+
+        return False
+
     def simplify(self):
         """
         simplifies the list of outcomes by combining elements
@@ -37,11 +53,21 @@ class DiscreteDensity:
                              o.get_value()):
                 # two DiscreteOutcomes with the same value -> join together
                 p = last_outcome.get_p() + o.get_p()
-                last_outcome = DiscreteOutcome(value=last_outcome.get_value(), p=p)
-                new_outcomes[-1] = last_outcome
-            else:
-                new_outcomes.append(o)
-                last_outcome = o
+                o = DiscreteOutcome(value=last_outcome.get_value(), p=p)
+                new_outcomes.pop(-1)
+            elif last_outcome is not None and \
+                isinstance(last_outcome, CombinedOutcome) and \
+                    self._max_min_includes(last_outcome, o):
+                o = CombinedOutcome([last_outcome, o])
+                new_outcomes.pop(-1)
+            elif last_outcome is not None and \
+                isinstance(o, CombinedOutcome) and \
+                    self._max_min_includes(o, last_outcome):
+                o = CombinedOutcome([last_outcome, o])
+                new_outcomes.pop(-1)
+
+            new_outcomes.append(o)
+            last_outcome = o
 
         self._outcomes = new_outcomes
 
