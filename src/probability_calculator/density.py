@@ -36,9 +36,9 @@ class DiscreteDensity:
                 math.isclose(last_outcome.get_value(),
                              o.get_value()):
                 # two DiscreteOutcomes with the same value -> join together
-                new_outcomes[-1] = DiscreteOutcome(
-                    value=last_outcome.get_value(), p=last_outcome.get_p() + o.get_p()
-                )
+                p = last_outcome.get_p() + o.get_p()
+                last_outcome = DiscreteOutcome(value=last_outcome.get_value(), p=p)
+                new_outcomes[-1] = last_outcome
             else:
                 new_outcomes.append(o)
                 last_outcome = o
@@ -64,7 +64,7 @@ class DiscreteDensity:
         return NotImplemented
 
 
-class Dice(DiscreteDensity):
+class Die(DiscreteDensity):
     def __init__(self, n):
         """
         Generates a fair die with n sides

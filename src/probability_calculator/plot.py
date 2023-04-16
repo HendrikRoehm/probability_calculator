@@ -13,7 +13,7 @@ def plot_density(
         kde=False,
         gridsize: int = 1000,
         **args):
-    outcomes = density.exportOutcomes()
+    outcomes = density.export_outcomes()
     x, y = get_plot_data(outcomes, **args)
 
     if kde:
