@@ -35,7 +35,23 @@ class RandomVariable:
                 parts.append(part1 + part2)
         return RandomVariable(_parts=parts)
 
+    def __rmul__(self, other):
+        if not isinstance(other, int):
+            raise NotImplementedError
+        
+        return self*other
+
     def __mul__(self, other):
+        if isinstance(other, int):
+            if other <= 0:
+                raise NotImplementedError
+            elif other == 1:
+                return self
+            else:
+                return self + self * (other - 1)
+        elif not isinstance(other, RandomVariable):
+            raise NotImplemented
+
         parts = []
         for part1 in self._parts:
             for part2 in other._parts:

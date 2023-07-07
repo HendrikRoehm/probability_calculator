@@ -57,3 +57,17 @@ class TestRandomVariables(unittest.TestCase):
         ]
 
         self.assertEqual(outcomes, expected)
+
+    def test_mul2(self):
+        var1 = RandomVariable(outcomes=[
+            {"p": Fraction(1, 10), "value": 1},
+            {"p": Fraction(3, 10), "value": 2}]
+        )
+        self.assertEqual((var1 * 2).outcomes(), (var1 + var1).outcomes())
+
+    def test_mul3(self):
+        var1 = RandomVariable(outcomes=[
+            {"p": Fraction(1, 10), "value": 1},
+            {"p": Fraction(3, 10), "value": 2}]
+        )
+        self.assertEqual((3 * var1).outcomes(), (var1 + var1 + var1).outcomes())
