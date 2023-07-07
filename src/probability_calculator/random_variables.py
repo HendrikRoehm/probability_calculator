@@ -1,6 +1,6 @@
-import math
 import itertools
-from typing import Optional, List, Union
+from fractions import Fraction
+from typing import List
 from .part import Outcome, _Part
 from .plot import plot_density
 
@@ -79,3 +79,13 @@ class RandomVariable:
             i = j
 
         return simplifiedParts
+
+class FairDie(RandomVariable):
+    def __init__(self, n):
+        """
+        Generates a fair die with n sides
+        """
+        p = Fraction(1, n)
+        outcomes = [Outcome(p=p, value=i) for i in range(1, n + 1)]
+
+        super().__init__(outcomes)

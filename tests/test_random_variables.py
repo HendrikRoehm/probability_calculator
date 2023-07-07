@@ -1,7 +1,6 @@
-import math
 import unittest
 from fractions import Fraction
-from probability_calculator.random_variables import RandomVariable
+from probability_calculator.random_variables import RandomVariable, FairDie
 
 
 class TestRandomVariables(unittest.TestCase):
@@ -71,3 +70,12 @@ class TestRandomVariables(unittest.TestCase):
             {"p": Fraction(3, 10), "value": 2}]
         )
         self.assertEqual((3 * var1).outcomes(), (var1 + var1 + var1).outcomes())
+
+    def test_fairdie(self):
+        var = FairDie(3)
+        expected = [
+            {"p": Fraction(1, 3), "value": 1},
+            {"p": Fraction(1, 3), "value": 2},
+            {"p": Fraction(1, 3), "value": 3}
+        ]
+        self.assertEqual(var.outcomes(), expected)
