@@ -3,7 +3,7 @@
 
 # probability_calculator
 
-Calculate with and analyze probability densities.
+Calculate with and analyze random variables / probability densities.
 
 ## Usage
 
@@ -11,14 +11,14 @@ Install the package, e.g.: `pip install probability_calculator`.
 
 ### Initialization and plotting
 
-The package provides simple ways to define discrete densities, for instance a die:
+The package provides simple ways to define random variables with discrete outcomes, for instance a die:
 
 
 ```python
-from probability_calculator.density import Die
+from probability_calculator import FairDie
 
-density = Die(6) # initialize a fair die with 6 sides
-fig, ax = density.plot() # plot the density using matplotlib
+density = FairDie(6) # initialize a fair die with 6 sides
+fig, ax = density.plot_outcomes() # plot the outcomes using matplotlib
 ```
 
 
@@ -27,19 +27,20 @@ fig, ax = density.plot() # plot the density using matplotlib
     
 
 
-For the general case, the class `DiscreteDensity` can be used:
+For the general case, the class `RandomVariables` can be used:
 
 
 ```python
-from probability_calculator.density import DiscreteDensity
+from probability_calculator import RandomVariable
+from fractions import Fraction
 
-density = DiscreteDensity(outcomes=[
-    { "value": 0, "p": 0.2 },
-    { "value": 1, "p": 0.3 },
-    { "value": 2.5, "p": 0.1 },
-    { "value": 3, "p": 0.4 },
+density = RandomVariable(outcomes=[
+    { "value": 0, "p": Fraction(2, 10) },
+    { "value": 1, "p": Fraction(3, 10) },
+    { "value": Fraction(5, 2), "p": Fraction(1, 10) },
+    { "value": 3, "p": Fraction(4, 10) },
 ]) # initialize a discrete density with 4 different outcomes
-fig, ax = density.plot() # plot the density using matplotlib
+fig, ax = density.plot_outcomes() # plot the density using matplotlib
 ```
 
 
@@ -48,15 +49,17 @@ fig, ax = density.plot() # plot the density using matplotlib
     
 
 
-### Combine discrete densities
+Note that only integers and fractions can be used to assure exact calculations.
 
-The discrete density of throwing a die two times can be modelled by multiplying the density with itself:
+### Combine random variables
+
+The discrete density of throwing a die two times can be modelled by adding the random variable with itself:
 
 
 ```python
-density_for_one_throw = Die(6)
-density_sum_of_two_throws = density_for_one_throw * density_for_one_throw # same as density_for_one_throw**2
-fig, ax = density_sum_of_two_throws.plot()
+density_for_one_throw = FairDie(6)
+density_sum_of_two_throws = density_for_one_throw + density_for_one_throw # same as density_for_one_throw*2
+fig, ax = density_sum_of_two_throws.plot_outcomes()
 ```
 
 
@@ -65,14 +68,13 @@ fig, ax = density_sum_of_two_throws.plot()
     
 
 
-Note that the operations on densities are defined in a way to comply with operations of [probability-generating functions](https://en.wikipedia.org/wiki/Probability-generating_function).
-This means multiplication of densities return the density of the sum of the two underlying random variables.
+Note that the operations (`+` and `*`) on random variables are always assuming independed random variables, even when using the same variable multiple times.
 
 ## Limitations
 
-Continuous densities are not supported at the moment.
+Continuous densities / random variables are not supported at the moment.
 
-Multiplying a lot of densities might get stuck due to a lot of possible outcomes. In general, multiplying 10 densities with 10 outcomes each lead to $10^{10}$ outcomes. However, simple cases like the die work, so even `Die(10)**100` is no problem.
+Adding many random variables together might get stuck due to a lot of possible outcomes. In general, adding 10 densities with 10 outcomes each lead to $10^{10}$ outcomes. However, simple cases like the die work, so even `Die(10)*100` is no problem.
 
 
 ## Contributing

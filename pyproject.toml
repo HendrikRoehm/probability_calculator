@@ -1,6 +1,6 @@
 [project]
 name = "probability_calculator"
-version = "0.2.0"
+version = "0.3.0"
 authors = [
   { name="Hendrik Roehm", email="git@roehm.ws" },
 ]
