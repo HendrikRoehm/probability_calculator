@@ -1,8 +1,8 @@
 import itertools
 from fractions import Fraction
-from typing import List
+from typing import List, Literal
 from .part import Outcome, _Part
-from .plot import plot_density
+import matplotlib.pyplot as plt
 
 
 class RandomVariable:
@@ -38,8 +38,8 @@ class RandomVariable:
     def __rmul__(self, other):
         if not isinstance(other, int):
             raise NotImplementedError
-        
-        return self*other
+
+        return self * other
 
     def __mul__(self, other):
         if isinstance(other, int):
@@ -57,6 +57,23 @@ class RandomVariable:
             for part2 in other._parts:
                 parts.append(part1 * part2)
         return RandomVariable(_parts=parts)
+
+    def plot_outcomes(
+            self,
+            xscale: Literal["linear", "log"] = "linear",
+            yscale: Literal["linear", "log"] = "linear"):
+        outcomes = self.outcomes()
+        x = [o["value"] for o in outcomes]
+        y = [o["p"] for o in outcomes]
+        fig, ax = plt.subplots()
+        ax.set_xscale(xscale)
+        ax.set_yscale(yscale)
+        ax.plot(x, y, "o", ms=4, alpha=0.7)
+        if yscale == "linear":
+            ax.set_ylim(bottom=0)
+        plt.show()
+        plt.close()
+        return fig, ax
 
     @staticmethod
     def _simplifyParts(parts: List[_Part]):
@@ -79,6 +96,7 @@ class RandomVariable:
             i = j
 
         return simplifiedParts
+
 
 class FairDie(RandomVariable):
     def __init__(self, n):
