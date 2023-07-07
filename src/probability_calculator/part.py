@@ -1,7 +1,7 @@
 from typing import TypedDict, List, Union
 from fractions import Fraction
 
-Outcome = TypedDict("Outcome", {"p": Fraction, "value": Fraction})
+Outcome = TypedDict("Outcome", {"p": Union[Fraction, int], "value": Union[Fraction, int]})
 
 
 class _Part():
