@@ -1,6 +1,6 @@
 import itertools
 from fractions import Fraction
-from typing import List, Literal
+from typing import List, Literal, Union
 from .part import Outcome, _Part
 import matplotlib.pyplot as plt
 
@@ -48,6 +48,7 @@ class RandomVariable:
             elif other == 1:
                 return self
             else:
+                # TODO: use logarithmic approach for solving
                 return self + self * (other - 1)
         elif not isinstance(other, RandomVariable):
             raise NotImplemented
@@ -61,10 +62,20 @@ class RandomVariable:
     def plot_outcomes(
             self,
             xscale: Literal["linear", "log"] = "linear",
-            yscale: Literal["linear", "log"] = "linear"):
-        outcomes = self.outcomes()
-        x = [o["value"] for o in outcomes]
-        y = [o["p"] for o in outcomes]
+            yscale: Literal["linear", "log"] = "linear",
+            ignore_tails_p: Union[Fraction, int, float] = 0):
+        outcomes = sorted(self.outcomes(), key=lambda o: o["value"])
+        sum_p = Fraction(0)
+        x = []
+        y = []
+        for o in outcomes:
+            sum_p = o["p"]
+            if sum_p <= ignore_tails_p or sum_p >= 1-ignore_tails_p:
+                continue
+
+            x.append(o["value"])
+            y.append(o["p"])
+        
         fig, ax = plt.subplots()
         ax.set_xscale(xscale)
         ax.set_yscale(yscale)
