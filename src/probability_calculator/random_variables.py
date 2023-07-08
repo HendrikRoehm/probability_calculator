@@ -3,6 +3,7 @@ from fractions import Fraction
 from typing import List, Literal, Union
 from .part import Outcome, _Part
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 
 class RandomVariable:
@@ -38,7 +39,7 @@ class RandomVariable:
             (l, u) = part.partial_cdf(value)
             lower += l
             upper += u
-        
+
         return (lower, upper)
 
     def __add__(self, other):
@@ -72,6 +73,14 @@ class RandomVariable:
                 parts.append(part1 * part2)
         return RandomVariable(_parts=parts)
 
+    def _minmax(self) -> tuple[Fraction, Fraction]:
+        min_value = self._parts[0]._min
+        max_value = self._parts[0]._max
+        for part in self._parts:
+            min_value = min(part._min, min_value)
+            max_value = max(part._max, max_value)
+        return (min_value, max_value)
+
     def plot_outcomes(
             self,
             xscale: Literal["linear", "log"] = "linear",
@@ -99,7 +108,58 @@ class RandomVariable:
         plt.close()
         return fig, ax
 
-    @staticmethod
+    def plot_histogram(
+            self,
+            xscale: Literal["linear", "log"] = "linear",
+            yscale: Literal["linear", "log"] = "linear",
+            cumulative: bool = False,
+            steps=101):
+
+        fig, ax = plt.subplots()
+        ax.set_xscale(xscale)
+        ax.set_yscale(yscale)
+
+        (min_value, max_value) = self._minmax()
+        delta = (max_value - min_value) / steps
+        delta_float = float(delta)
+        last_value = min_value
+        last_lower = Fraction(0)
+        last_upper = Fraction(0)
+        while last_value < max_value:
+            current_value = last_value + delta
+            (current_lower, current_upper) = self.cdf(current_value)
+
+            xmin = float(last_value)
+            xmax = xmin + delta_float
+            value = float(current_lower / 2 + current_upper / 2) if cumulative else \
+                float(current_lower / 2 + current_upper / 2 - last_lower / 2 - last_upper / 2)
+            ax.add_patch(Rectangle((xmin, 0), delta_float, value))
+            ax.hlines(
+                float(current_lower) if cumulative else float(current_lower - last_upper),
+                xmin,
+                xmax,
+                color="red"
+            )
+            ax.hlines(
+                float(current_upper) if cumulative else max(0, float(current_upper - last_lower)),
+                xmin,
+                xmax,
+                color="black"
+            )
+
+            last_value = current_value
+            last_lower = current_lower
+            last_upper = current_upper
+
+        ax.margins(0.01)
+        ax.autoscale()
+        if yscale == "linear":
+            ax.set_ylim(bottom=0)
+        plt.show()
+        plt.close()
+        return fig, ax
+
+    @ staticmethod
     def _simplifyParts(parts: List[_Part]) -> List[_Part]:
         sortedParts = sorted(parts, key=lambda part: part._min)
         simplifiedParts = []
@@ -114,7 +174,7 @@ class RandomVariable:
             max_value = max(currentPart._max, part._max)
 
             # isMerge = p * (max_value - min_value) < 1e-5
-            isMerge = (max_value - min_value) <= 0
+            isMerge = (max_value - min_value) <= 1
             if isMerge:
                 currentPart = _Part.merge([currentPart, part])
             else:
