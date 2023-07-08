@@ -28,6 +28,19 @@ class RandomVariable:
             itertools.chain(*[part.outcomes() for part in self._parts]))
         return outcomes
 
+    def cdf(self, value: Union[Fraction, int]) -> tuple[Fraction, Fraction]:
+        """
+        returns lower and upper bounds on the cumulative distribution function of the random variable
+        """
+        lower = Fraction(0)
+        upper = Fraction(0)
+        for part in self._parts:
+            (l, u) = part.partial_cdf(value)
+            lower += l
+            upper += u
+        
+        return (lower, upper)
+
     def __add__(self, other):
         parts = []
         for part1 in self._parts:
@@ -87,7 +100,7 @@ class RandomVariable:
         return fig, ax
 
     @staticmethod
-    def _simplifyParts(parts: List[_Part]):
+    def _simplifyParts(parts: List[_Part]) -> List[_Part]:
         sortedParts = sorted(parts, key=lambda part: part._min)
         simplifiedParts = []
 

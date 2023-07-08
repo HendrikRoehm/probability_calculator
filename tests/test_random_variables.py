@@ -79,3 +79,14 @@ class TestRandomVariables(unittest.TestCase):
             {"p": Fraction(1, 3), "value": 3}
         ]
         self.assertEqual(var.outcomes(), expected)
+
+    def test_cdf(self):
+        var = RandomVariable(outcomes=[
+            {"p": Fraction(7, 10), "value": 1},
+            {"p": Fraction(3, 10), "value": 3}]
+        )
+        self.assertEqual(var.cdf(0), (Fraction(0), Fraction(0)))
+        self.assertEqual(var.cdf(1), (Fraction(7, 10), Fraction(7, 10)))
+        self.assertEqual(var.cdf(2), (Fraction(7, 10), Fraction(7, 10)))
+        self.assertEqual(var.cdf(3), (Fraction(1), Fraction(1)))
+        self.assertEqual(var.cdf(4), (Fraction(1), Fraction(1)))

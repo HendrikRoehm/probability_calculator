@@ -74,3 +74,21 @@ class TestPart(unittest.TestCase):
         self.assertEqual(part._square, Fraction(3))
         self.assertEqual(part._min, Fraction(1))
         self.assertEqual(part._max, Fraction(2))
+
+    def test_cdf(self):
+        p0 = Fraction(0)
+        p1 = Fraction(1, 5)
+        part = _Part(p1, 1, 1, 1, 1)
+        self.assertEqual(part.partial_cdf(0), (p0, p0))
+        self.assertEqual(part.partial_cdf(1), (p1, p1))
+        self.assertEqual(part.partial_cdf(2), (p1, p1))
+
+    def test_cdf2(self):
+        part = _Part(Fraction(1, 10), 3, 5, 1, 7)
+        self.assertEqual(part.partial_cdf(0), (Fraction(0), Fraction(0)))
+        self.assertEqual(part.partial_cdf(1), (Fraction(0), Fraction(4, 60)))
+        self.assertEqual(part.partial_cdf(2), (Fraction(0), Fraction(4, 50)))
+        self.assertEqual(part.partial_cdf(3), (Fraction(0), Fraction(1, 10)))
+        self.assertEqual(part.partial_cdf(4), (Fraction(1, 30), Fraction(1, 10)))
+        self.assertEqual(part.partial_cdf(7), (Fraction(4, 60), Fraction(1, 10)))
+        self.assertEqual(part.partial_cdf(8), (Fraction(1, 10), Fraction(1, 10)))

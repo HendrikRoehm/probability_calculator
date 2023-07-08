@@ -30,6 +30,24 @@ class _Part():
 #    def get_partial_second_moment(self):
 #        return self._square * self._p
 
+    def partial_cdf(self, value: Union[Fraction, int]) -> tuple[Fraction, Fraction]:
+        """
+        returns lower and upper bound on the (partial) cdf of the part
+        """
+        # TODO: Check correctness of formulas
+        if value < self._min:
+            return (Fraction(0), Fraction(0))
+        elif value > self._max:
+            return (self._p, self._p)
+        elif self._min == self._max:
+            return (self._p, self._p)
+        elif value <= self._mean:
+            return (Fraction(0), self._p * (self._max - self._mean) / (self._max - value))
+        elif value <= self._max:
+            return (self._p * (value - self._mean) / (value - self._min), self._p)
+        else:
+            raise Exception("something impossible occurred")
+
     def __str__(self) -> str:
         return f"_Part(p={self._p}, mean={self._mean}, square={self._square}, min={self._min}, max={self._max})"
 
