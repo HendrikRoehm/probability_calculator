@@ -8,7 +8,7 @@ from fractions import Fraction
 class TestPart(unittest.TestCase):
     def test_str(self):
         part = _Part(0, 1, 2, 3, 4)
-        self.assertEqual(str(part), "_Part(p=0, mean=1, sqrt=2, min=3, max=4)")
+        self.assertEqual(str(part), "_Part(p=0, mean=1, square=2, min=3, max=4)")
 
     def test_eq(self):
         part1 = _Part(0, 1, 2, 3, 4)
@@ -22,7 +22,7 @@ class TestPart(unittest.TestCase):
         part = part1 + part2
         self.assertEqual(part._p, Fraction(2, 100))
         self.assertEqual(part._mean, 11)
-        self.assertEqual(part._sqrt, 121)
+        self.assertEqual(part._square, 121)
         self.assertEqual(part._min, 9)
         self.assertEqual(part._max, 14)
 
@@ -33,7 +33,7 @@ class TestPart(unittest.TestCase):
         part = part1 * part2
         self.assertEqual(part._p, Fraction(2, 100))
         self.assertEqual(part._mean, 24)
-        self.assertEqual(part._sqrt, 576)
+        self.assertEqual(part._square, 576)
         self.assertEqual(part._min, 14)
         self.assertEqual(part._max, 40)
 
@@ -71,6 +71,6 @@ class TestPart(unittest.TestCase):
 
         self.assertEqual(part._p, Fraction(3, 10))
         self.assertEqual(part._mean, Fraction(5, 3))
-        self.assertEqual(part._sqrt, Fraction(3))
+        self.assertEqual(part._square, Fraction(3))
         self.assertEqual(part._min, Fraction(1))
         self.assertEqual(part._max, Fraction(2))

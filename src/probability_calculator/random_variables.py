@@ -70,12 +70,12 @@ class RandomVariable:
         y = []
         for o in outcomes:
             sum_p = o["p"]
-            if sum_p <= ignore_tails_p or sum_p >= 1-ignore_tails_p:
+            if sum_p <= ignore_tails_p or sum_p >= 1 - ignore_tails_p:
                 continue
 
             x.append(o["value"])
             y.append(o["p"])
-        
+
         fig, ax = plt.subplots()
         ax.set_xscale(xscale)
         ax.set_yscale(yscale)
@@ -91,20 +91,26 @@ class RandomVariable:
         sortedParts = sorted(parts, key=lambda part: part._min)
         simplifiedParts = []
 
-        i = 0
+        i = 1
+        currentPart = sortedParts[0]
         while i < len(sortedParts):
             part = sortedParts[i]
-            j = i + 1
-            while j < len(sortedParts):
-                nextPart = sortedParts[j]
-                if nextPart._min != part._min or nextPart._max != part._max:
-                    break
 
-                j += 1
+            p = currentPart._p + part._p
+            min_value = min(currentPart._min, part._min)
+            max_value = max(currentPart._max, part._max)
 
-            selectedParts = sortedParts[i:j]
-            simplifiedParts.append(_Part.merge(selectedParts))
-            i = j
+            # isMerge = p * (max_value - min_value) < 1e-5
+            isMerge = (max_value - min_value) <= 0
+            if isMerge:
+                currentPart = _Part.merge([currentPart, part])
+            else:
+                simplifiedParts.append(currentPart)
+                currentPart = part
+
+            i += 1
+
+        simplifiedParts.append(currentPart)
 
         return simplifiedParts
 
