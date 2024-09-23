@@ -36,11 +36,24 @@ class RandomVariable:
         lower = Fraction(0)
         upper = Fraction(0)
         for part in self._parts:
+            if part._min > value:
+                break
+
             (l, u) = part.partial_cdf(value)
             lower += l
             upper += u
 
         return (lower, upper)
+
+    def quantil(self, q: Fraction):
+        # TODO: use lower and upper bound, this is not really correct
+        sum = Fraction(0, 1)
+        for part in self._parts:
+            sum += part._p
+            if sum > q:
+                return part._min
+
+        return self._minmax()[1]
 
     def __add__(self, other):
         parts = []
@@ -108,18 +121,51 @@ class RandomVariable:
         plt.close()
         return fig, ax
 
+    def plot_quantils(
+            self,
+            xscale: Literal["linear", "log"] = "linear",
+            yscale: Literal["linear", "log"] = "linear",
+            ignore_tails_p: Union[Fraction, int, float] = 0):
+        # TODO: implement using upper and lower bounds
+        outcomes = sorted(self.outcomes(), key=lambda o: o["value"])
+        sum = 0.
+        x = [0.]
+        y = [float(outcomes[0]["value"])]
+        for o in outcomes:
+            sum += float(o["p"])
+            if sum < ignore_tails_p:
+                continue
+            elif sum > 1-ignore_tails_p:
+                break
+            x.append(sum)
+            y.append(float(o["value"]))
+            print(x[-1], y[-1])
+
+        fig, ax = plt.subplots()
+        ax.set_xscale(xscale)
+        ax.set_yscale(yscale)
+        ax.plot(x, y)
+        if yscale == "linear":
+            ax.set_ylim(bottom=0)
+        plt.show()
+        plt.close()
+        return fig, ax
+
+
     def plot_histogram(
             self,
             xscale: Literal["linear", "log"] = "linear",
             yscale: Literal["linear", "log"] = "linear",
             cumulative: bool = False,
-            steps=101):
+            steps=101,
+            ignore_tails_p: Fraction = Fraction(0)):
 
         fig, ax = plt.subplots()
         ax.set_xscale(xscale)
         ax.set_yscale(yscale)
 
-        (min_value, max_value) = self._minmax()
+        min_value = self.quantil(ignore_tails_p)
+        max_value = self.quantil(1-ignore_tails_p)
         delta = (max_value - min_value) / steps
         delta_float = float(delta)
         last_value = min_value
