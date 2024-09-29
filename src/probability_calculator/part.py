@@ -34,19 +34,32 @@ class _Part():
         """
         returns lower and upper bound on the (partial) cdf of the part
         """
-        # TODO: Check correctness of formulas
         if value < self._min:
             return (Fraction(0), Fraction(0))
-        elif value > self._max:
+
+        d = self._square - self._mean**2
+        if d == 0 or value >= self._max:
+            # d == 0 is a corner case where there is no variance
+            # should imply _min = _mean = _max
             return (self._p, self._p)
-        elif self._min == self._max:
-            return (self._p, self._p)
-        elif value <= self._mean:
-            return (Fraction(0), self._p * (self._max - self._mean) / (self._max - value))
-        elif value <= self._max:
-            return (self._p * (value - self._mean) / (value - self._min), self._p)
-        else:
-            raise Exception("something impossible occurred")
+
+        # as d > 0, _max - _mean > 0 and _mean - _min > 0
+        dmaxmean = self._max - self._mean
+        bound1 = self._mean - d / dmaxmean
+        dmeanvalue = self._mean - value
+        if value <= bound1:
+            return (Fraction(0), self._p /(1 + dmeanvalue**2 / d))
+
+        dmeanmin = self._mean - self._min
+        bound2 = self._mean + d / dmeanmin
+        if value <= bound2:
+            dmaxmin = self._max - self._min
+            dmaxvalue = self._max - value
+            dvaluemin = value - self._min
+            com = (d - dmaxmean*dmeanvalue)/dmaxmin
+            return (self._p*com/dvaluemin, self._p*(dmaxmean - com)/dmaxvalue)
+
+        return (self._p / (1 + d / dmeanvalue**2), self._p)
 
     def __str__(self) -> str:
         return f"_Part(p={self._p}, mean={self._mean}, square={self._square}, min={self._min}, max={self._max})"
@@ -135,10 +148,12 @@ class _Part():
             min_value = min(min_value, el._min)
             max_value = max(max_value, el._max)
 
+        # denominator limiting is required for a fast enough computation
+        # however, the big denominator should result in a very small derivation
         return _Part(
-            p,
-            ex / p,
-            exx / p,
+            p.limit_denominator(max_denominator=1000_000_000_000_000_000_000_000_000),
+            (ex / p).limit_denominator(max_denominator=1000_000),
+            (exx / p).limit_denominator(max_denominator=1000),
             min_value,
             max_value
         )

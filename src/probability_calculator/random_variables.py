@@ -1,20 +1,20 @@
 import itertools
 from fractions import Fraction
 from typing import List, Literal, Union
-from .part import Outcome, _Part
+from . import part
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-
+import time
 
 class RandomVariable:
-    def __init__(self, outcomes: List[Outcome] = [], _parts: List[_Part] = []):
+    def __init__(self, outcomes: List[part.Outcome] = [], _parts: List[part._Part] = []):
         parts = []
-        for part in _parts:
-            parts.append(part)
+        for p in _parts:
+            parts.append(p)
         for outcome in outcomes:
             p = outcome["p"]
             value = outcome["value"]
-            parts.append(_Part(
+            parts.append(part._Part(
                 p,
                 value,
                 value**2,
@@ -25,7 +25,7 @@ class RandomVariable:
         self._parts = RandomVariable._simplifyParts(parts)
 
     def outcomes(self):
-        outcomes: List[Outcome] = list(
+        outcomes: List[part.Outcome] = list(
             itertools.chain(*[part.outcomes() for part in self._parts]))
         return outcomes
 
@@ -56,11 +56,14 @@ class RandomVariable:
         return self._minmax()[1]
 
     def __add__(self, other):
+        start = time.time()
         parts = []
         for part1 in self._parts:
             for part2 in other._parts:
                 parts.append(part1 + part2)
-        return RandomVariable(_parts=parts)
+        ret = RandomVariable(_parts=parts)
+        print("add %s" % (time.time() - start))
+        return ret
 
     def __rmul__(self, other):
         if not isinstance(other, int):
@@ -75,8 +78,9 @@ class RandomVariable:
             elif other == 1:
                 return self
             else:
-                # TODO: use logarithmic approach for solving
-                return self + self * (other - 1)
+                res = self + self * (other - 1)
+                print("mul", other, len(res._parts))
+                return res
         elif not isinstance(other, RandomVariable):
             raise NotImplemented
 
@@ -121,51 +125,21 @@ class RandomVariable:
         plt.close()
         return fig, ax
 
-    def plot_quantils(
-            self,
-            xscale: Literal["linear", "log"] = "linear",
-            yscale: Literal["linear", "log"] = "linear",
-            ignore_tails_p: Union[Fraction, int, float] = 0):
-        # TODO: implement using upper and lower bounds
-        outcomes = sorted(self.outcomes(), key=lambda o: o["value"])
-        sum = 0.
-        x = [0.]
-        y = [float(outcomes[0]["value"])]
-        for o in outcomes:
-            sum += float(o["p"])
-            if sum < ignore_tails_p:
-                continue
-            elif sum > 1-ignore_tails_p:
-                break
-            x.append(sum)
-            y.append(float(o["value"]))
-            print(x[-1], y[-1])
-
-        fig, ax = plt.subplots()
-        ax.set_xscale(xscale)
-        ax.set_yscale(yscale)
-        ax.plot(x, y)
-        if yscale == "linear":
-            ax.set_ylim(bottom=0)
-        plt.show()
-        plt.close()
-        return fig, ax
-
-
     def plot_histogram(
             self,
             xscale: Literal["linear", "log"] = "linear",
             yscale: Literal["linear", "log"] = "linear",
             cumulative: bool = False,
             steps=101,
-            ignore_tails_p: Fraction = Fraction(0)):
+            upper_value: Union[Fraction, None] = None):
 
         fig, ax = plt.subplots()
         ax.set_xscale(xscale)
         ax.set_yscale(yscale)
 
-        min_value = self.quantil(ignore_tails_p)
-        max_value = self.quantil(1-ignore_tails_p)
+        min_value, max_value = self._minmax()
+        if upper_value is not None:
+            max_value = upper_value
         delta = (max_value - min_value) / steps
         delta_float = float(delta)
         last_value = min_value
@@ -200,38 +174,129 @@ class RandomVariable:
         ax.margins(0.01)
         ax.autoscale()
         if yscale == "linear":
-            ax.set_ylim(bottom=0)
+            ax.set_ylim(bottom=0, top=1)
         plt.show()
         plt.close()
         return fig, ax
 
+    def plot_quantils(
+            self,
+            steps=101,
+            upper_value: Union[Fraction, None] = None):
+
+        fig, ax = plt.subplots()
+        min_value, max_value = self._minmax()
+        if upper_value is not None:
+            max_value = upper_value
+        delta = (max_value - min_value) / steps
+        delta_float = float(delta)
+        
+        last_value = min_value
+        x = []
+        y = []
+        lx = []
+        ly = []
+        ux = []
+        uy = []
+        while last_value < max_value:
+            current_value = last_value + delta
+            (current_lower, current_upper) = self.cdf(current_value)
+
+            value_float = float(current_value)
+            current_p = float(current_lower / 2 + current_upper / 2)
+            x.append(value_float)
+            y.append(current_p)
+            
+            lower_float = float(current_lower)
+            lx.append(lower_float)
+            ly.append(value_float)
+            lx.append(lower_float)
+            ly.append(value_float + delta_float)
+
+            upper_float = float(current_upper)
+            ux.append(upper_float)
+            uy.append(value_float - delta_float)
+            ux.append(upper_float)
+            uy.append(value_float)
+            #ax.vlines(
+            #    float(current_lower),
+            #    value_float,
+            #    value_float + delta_float,
+            #    color="red"
+            #)
+            #ax.vlines(
+            #    float(current_upper),
+            #    value_float - delta_float,
+            #    value_float,
+            #    color="black"
+            #)
+
+            last_value = current_value
+
+        ax.margins(0.01)
+        ax.autoscale()
+        ax.set_xlim(left=0, right=1)
+        plt.plot(lx, ly, color="blue", alpha=0.2)
+        plt.plot(ux, uy, color="blue", alpha=0.2)
+        plt.plot(y, x, color="blue")
+        plt.show()
+        plt.close()
+
+        if upper_value is not None:
+            print(f"P(value > {upper_value}) ∈ [{1-ux[-1]:.8f}, {1-lx[-1]:.8f}]")
+
+        return fig, ax
+
     @ staticmethod
-    def _simplifyParts(parts: List[_Part]) -> List[_Part]:
-        sortedParts = sorted(parts, key=lambda part: part._min)
-        simplifiedParts = []
+    def _simplifyParts(parts: List[part._Part]) -> List[part._Part]:
+        goalPartCount = 800
+        if len(parts) > goalPartCount:
+            sortedParts = sorted(parts, key=lambda part: part._mean)
+            mergeBounds = []
+            i = 1
+            currentPart = sortedParts[0]
+            while i < len(sortedParts):
+                nextPart = sortedParts[i]
+                p = currentPart._p + nextPart._p
+                min_value = min(currentPart._min, nextPart._min)
+                max_value = max(currentPart._max, nextPart._max)
 
-        i = 1
-        currentPart = sortedParts[0]
-        while i < len(sortedParts):
-            part = sortedParts[i]
+                mergeBounds.append(p * p * (max_value - min_value))
+                currentPart = nextPart
+                i += 1
 
-            p = currentPart._p + part._p
-            min_value = min(currentPart._min, part._min)
-            max_value = max(currentPart._max, part._max)
+            sortedBounds = sorted(mergeBounds)
+            bound = sortedBounds[-goalPartCount]
 
-            # isMerge = p * (max_value - min_value) < 1e-5
-            isMerge = (max_value - min_value) <= 1
-            if isMerge:
-                currentPart = _Part.merge([currentPart, part])
-            else:
-                simplifiedParts.append(currentPart)
-                currentPart = part
+            simplifiedParts = []
+            i = 1
+            currentPart = sortedParts[0]
+            while i < len(sortedParts):
+                nextPart = sortedParts[i]
 
-            i += 1
+                p = currentPart._p + nextPart._p
+                min_value = min(currentPart._min, nextPart._min)
+                max_value = max(currentPart._max, nextPart._max)
 
-        simplifiedParts.append(currentPart)
+                isMerge = p*p*(max_value - min_value) <= bound
+                # isMerge = p**2*(max_value - min_value) <= 1e-5
+                if isMerge:
+                    currentPart = part._Part.merge([currentPart, nextPart])
+                else:
+                    simplifiedParts.append(currentPart)
+                    currentPart = nextPart
 
-        return simplifiedParts
+                i += 1
+
+            simplifiedParts.append(currentPart)
+
+            if len(simplifiedParts) > 1.1 * goalPartCount:
+                return RandomVariable._simplifyParts(simplifiedParts)
+
+        else:
+            simplifiedParts = parts[:]
+
+        return sorted(simplifiedParts, key=lambda p: p._min)
 
 
 class FairDie(RandomVariable):
@@ -240,6 +305,6 @@ class FairDie(RandomVariable):
         Generates a fair die with n sides
         """
         p = Fraction(1, n)
-        outcomes = [Outcome(p=p, value=i) for i in range(1, n + 1)]
+        outcomes = [part.Outcome(p=p, value=i) for i in range(1, n + 1)]
 
         super().__init__(outcomes)
