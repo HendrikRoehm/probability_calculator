@@ -1,5 +1,6 @@
 from typing import TypedDict, List, Union
 from fractions import Fraction
+from math import log, sqrt, atan
 
 Outcome = TypedDict("Outcome", {"p": Union[Fraction, int], "value": Union[Fraction, int]})
 
@@ -23,6 +24,12 @@ class _Part():
         self._square = Fraction(square)
         self._min = Fraction(min)
         self._max = Fraction(max)
+
+        # consistensy check
+        assert(self._mean >= self._min)
+        assert(self._mean <= self._max)
+        assert(self._square >= self._mean**2)
+        assert(self._square <= self._mean**2 + (self._mean - self._min) * (self._max - self._mean))
 
 #    def get_partial_expected(self):
 #        return self._mean * self._p
@@ -60,6 +67,46 @@ class _Part():
             return (self._p*com/dvaluemin, self._p*(dmaxmean - com)/dmaxvalue)
 
         return (self._p / (1 + d / dmeanvalue**2), self._p)
+
+    def cdf_uncertainty(self, exact_upper = True) -> float:
+        """
+        Computes the scaled integral between the upper and lower bound of the partial_cdf.
+        For the real integral, one has to multiply by p.
+        
+        When the variance is maxed out and all probability is at the bounds,
+        the theoretic integral would be 0. However, as we are using this as a
+        heuristic, we give it a positive value if exact_upper is false.
+        """
+        d = self._square - self._mean**2
+        dmaxmin = self._max - self._min
+        if d == 0 or dmaxmin == 0:
+            return 0.
+
+        # as d > 0, _max - _mean > 0 and _mean - _min > 0
+        dmaxmean = self._max - self._mean
+        dmeanmin = self._mean - self._min
+        dupper = dmaxmean * dmeanmin
+
+        if d == dupper:
+            # no variance as all probability is at the bounds
+            if exact_upper:
+                return 0.
+            
+            # as heuristic use a lower d
+            d = d / 2
+
+        # difference between bound1 and bound2
+        I = log(float((dupper**2 + d**2  + d * (dmaxmean**2 + dmeanmin**2))/(dupper - d)**2))
+        ret = I * float((dupper - d) / dmaxmin)
+        
+        # difference between bound2 and t_max
+        fsqrtd = sqrt(float(d))
+        ret += fsqrtd * (atan(-fsqrtd / float(dmeanmin)) - atan(float(-dmaxmean)/fsqrtd))
+
+        # difference between t_min and bound1
+        ret += fsqrtd * (atan(-fsqrtd / float(dmaxmean)) - atan(-float(dmeanmin)/fsqrtd))
+
+        return ret
 
     def __str__(self) -> str:
         return f"_Part(p={self._p}, mean={self._mean}, square={self._square}, min={self._min}, max={self._max})"
@@ -150,10 +197,19 @@ class _Part():
 
         # denominator limiting is required for a fast enough computation
         # however, the big denominator should result in a very small derivation
+        # make sure that the rounding does not make probles with the numbers
+        new_p = p.limit_denominator(max_denominator=1000_000_000_000_000_000_000_000_000)
+        new_ex = (ex / p).limit_denominator(max_denominator=1000_000)
+        new_ex = max(new_ex, min_value)
+        new_ex = min(new_ex, max_value)
+        new_exx = (exx / p).limit_denominator(max_denominator=1000_000)
+        new_exx = max(new_exx, new_ex**2)
+        new_exx = min(new_exx, new_ex**2 + (max_value - new_ex)*(new_ex - min_value))
+
         return _Part(
-            p.limit_denominator(max_denominator=1000_000_000_000_000_000_000_000_000),
-            (ex / p).limit_denominator(max_denominator=1000_000),
-            (exx / p).limit_denominator(max_denominator=1000),
+            new_p,
+            new_ex,
+            new_exx,
             min_value,
             max_value
         )

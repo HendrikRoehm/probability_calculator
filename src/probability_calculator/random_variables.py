@@ -182,15 +182,19 @@ class RandomVariable:
     def plot_quantils(
             self,
             steps=101,
-            upper_value: Union[Fraction, None] = None):
+            upper_value: Union[Fraction, None] = None,
+            lower_value: Union[Fraction, None] = None,
+            fixed_pscale=True):
 
         fig, ax = plt.subplots()
         min_value, max_value = self._minmax()
         if upper_value is not None:
             max_value = upper_value
+        if lower_value is not None:
+            min_value = lower_value
         delta = (max_value - min_value) / steps
         delta_float = float(delta)
-        
+
         last_value = min_value
         x = []
         y = []
@@ -235,13 +239,16 @@ class RandomVariable:
 
         ax.margins(0.01)
         ax.autoscale()
-        ax.set_xlim(left=0, right=1)
+        if fixed_pscale:
+            ax.set_xlim(left=0, right=1)
         plt.plot(lx, ly, color="blue", alpha=0.2)
         plt.plot(ux, uy, color="blue", alpha=0.2)
         plt.plot(y, x, color="blue")
         plt.show()
         plt.close()
 
+        if lower_value is not None:
+            print(f"P(value < {lower_value}) ∈ [{lx[0]:.8f}, {ux[0]:.8f}]")
         if upper_value is not None:
             print(f"P(value > {upper_value}) ∈ [{1-ux[-1]:.8f}, {1-lx[-1]:.8f}]")
 
@@ -249,6 +256,14 @@ class RandomVariable:
 
     @ staticmethod
     def _simplifyParts(parts: List[part._Part]) -> List[part._Part]:
+        def heuristic(part1: part._Part, part2: part._Part, merged: part._Part):
+            if (merged._p == Fraction(0)):
+                return 0.
+            value = merged.cdf_uncertainty(exact_upper=False)
+            value -= float(part1._p / mergedPart._p) * part1.cdf_uncertainty()
+            value -= float(part2._p / mergedPart._p) * part2.cdf_uncertainty()
+            return float(merged._p) * value
+
         goalPartCount = 800
         if len(parts) > goalPartCount:
             sortedParts = sorted(parts, key=lambda part: part._mean)
@@ -257,11 +272,9 @@ class RandomVariable:
             currentPart = sortedParts[0]
             while i < len(sortedParts):
                 nextPart = sortedParts[i]
-                p = currentPart._p + nextPart._p
-                min_value = min(currentPart._min, nextPart._min)
-                max_value = max(currentPart._max, nextPart._max)
+                mergedPart = part._Part.merge([currentPart, nextPart])
 
-                mergeBounds.append(p * p * (max_value - min_value))
+                mergeBounds.append(heuristic(currentPart, nextPart, mergedPart))
                 currentPart = nextPart
                 i += 1
 
@@ -273,15 +286,11 @@ class RandomVariable:
             currentPart = sortedParts[0]
             while i < len(sortedParts):
                 nextPart = sortedParts[i]
+                mergedPart = part._Part.merge([currentPart, nextPart])
 
-                p = currentPart._p + nextPart._p
-                min_value = min(currentPart._min, nextPart._min)
-                max_value = max(currentPart._max, nextPart._max)
-
-                isMerge = p*p*(max_value - min_value) <= bound
-                # isMerge = p**2*(max_value - min_value) <= 1e-5
+                isMerge = heuristic(currentPart, nextPart, mergedPart) <= bound
                 if isMerge:
-                    currentPart = part._Part.merge([currentPart, nextPart])
+                    currentPart = mergedPart
                 else:
                     simplifiedParts.append(currentPart)
                     currentPart = nextPart
