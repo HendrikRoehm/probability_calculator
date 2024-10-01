@@ -53,7 +53,10 @@ class NumericRandomVariable:
         for part1 in self._parts:
             for part2 in other._parts:
                 parts.append(part1 + part2)
+        #print("array generate %s" % (time.time() - start))
+        start2 = time.time()
         ret = NumericRandomVariable(_parts=parts)
+        #print("instantiate var %s" % (time.time() - start2))
         print("add %s" % (time.time() - start))
         return ret
 
@@ -254,7 +257,7 @@ class NumericRandomVariable:
             value -= exp(part2._logp - mergedPart._logp) * part2.cdf_uncertainty()
             return exp(merged._logp) * value
 
-        goalPartCount = 800
+        goalPartCount = 200
         if len(parts) > goalPartCount:
             sortedParts = sorted(parts, key=lambda part: part._mean)
             mergeBounds = []

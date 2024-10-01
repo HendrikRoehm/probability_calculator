@@ -192,7 +192,7 @@ class _Part():
         ex = factor1 * part1._mean + factor2 * part2._mean
         exx = factor1 * part1._square + factor2 * part2._square
 
-        # make sure that the rounding does not make probles with the numbers
+        # make sure that the rounding does not make problems with the numbers
         ex = max(ex, min_value)
         ex = min(ex, max_value)
         exx = max(exx, ex**2)
