@@ -57,7 +57,7 @@ class NumericRandomVariable:
         start2 = time.time()
         ret = NumericRandomVariable(_parts=parts)
         #print("instantiate var %s" % (time.time() - start2))
-        print("add %s" % (time.time() - start))
+        #print("add %s" % (time.time() - start))
         return ret
 
     def __rmul__(self, other):
@@ -93,6 +93,35 @@ class NumericRandomVariable:
             max_value = max(part._max, max_value)
         return (min_value, max_value)
 
+    def split(self, threshold: float) -> tuple["NumericRandomVariable", "NumericRandomVariable"]:
+        """
+        Splits the random variable into two parts, one with part means <= threshold and one with part means > threshold
+        """
+        lower_parts = []
+        upper_parts = []
+        for part in self._parts:
+            if part._mean <= threshold:
+                lower_parts.append(part)
+            else:
+                upper_parts.append(part)
+
+        return (NumericRandomVariable(_parts=lower_parts), NumericRandomVariable(_parts=upper_parts))
+
+    def pscale(self, pfactor: float) -> "NumericRandomVariable":
+        logpfactor = log(pfactor)
+        scaled_parts = []
+        for part in self._parts:
+            part._logp += logpfactor
+            scaled_parts.append(part)
+        return NumericRandomVariable(_parts=scaled_parts)
+
+    def concat(self, other: "NumericRandomVariable") -> "NumericRandomVariable":
+        """
+        Concatenates two random variables, i.e. adds the parts of the other random variable to this one
+        """
+        parts = self._parts + other._parts
+        return NumericRandomVariable(_parts=parts)
+
     def plot_outcomes(
             self,
             xscale: Literal["linear", "log"] = "linear",
@@ -126,7 +155,8 @@ class NumericRandomVariable:
             yscale: Literal["linear", "log"] = "linear",
             cumulative: bool = False,
             steps=101,
-            upper_value: Union[Fraction, None] = None):
+            lower_value: Union[float, None] = None,
+            upper_value: Union[float, None] = None):
 
         fig, ax = plt.subplots()
         ax.set_xscale(xscale)
@@ -135,6 +165,8 @@ class NumericRandomVariable:
         min_value, max_value = self._minmax()
         if upper_value is not None:
             max_value = upper_value
+        if lower_value is not None:
+            min_value = lower_value
         delta = (max_value - min_value) / steps
         delta_float = float(delta)
         last_value = min_value
