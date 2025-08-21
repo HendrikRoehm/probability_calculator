@@ -197,12 +197,13 @@ class _Part():
 
         # denominator limiting is required for a fast enough computation
         # however, the big denominator should result in a very small derivation
-        # make sure that the rounding does not make probles with the numbers
-        new_p = p.limit_denominator(max_denominator=1000_000_000_000_000_000_000_000_000)
+        # make sure that the rounding does not make problems with the numbers 
+        new_p = p if log(p.numerator, 10) - log(p.denominator, 10) < -3*7 else p.limit_denominator(max_denominator=1000_000_000_000_000_000_000_000_000)
         new_ex = (ex / p).limit_denominator(max_denominator=1000_000)
+        new_exx = (exx / p).limit_denominator(max_denominator=1000_000)
+        
         new_ex = max(new_ex, min_value)
         new_ex = min(new_ex, max_value)
-        new_exx = (exx / p).limit_denominator(max_denominator=1000_000)
         new_exx = max(new_exx, new_ex**2)
         new_exx = min(new_exx, new_ex**2 + (max_value - new_ex)*(new_ex - min_value))
 

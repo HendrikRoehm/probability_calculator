@@ -29,6 +29,18 @@ class RandomVariable:
             itertools.chain(*[part.outcomes() for part in self._parts]))
         return outcomes
 
+    def mean(self) -> Fraction:
+        mean = Fraction(0)
+        for part in self._parts:
+            mean += part._mean * part._p
+        return mean
+    
+    def square(self) -> Fraction:
+        square = Fraction(0)
+        for part in self._parts:
+            square += part._square * part._p
+        return square
+
     def cdf(self, value: Union[Fraction, int]) -> tuple[Fraction, Fraction]:
         """
         returns lower and upper bounds on the cumulative distribution function of the random variable
@@ -257,8 +269,6 @@ class RandomVariable:
     @ staticmethod
     def _simplifyParts(parts: List[part._Part]) -> List[part._Part]:
         def heuristic(part1: part._Part, part2: part._Part, merged: part._Part):
-            if (merged._p == Fraction(0)):
-                return 0.
             value = merged.cdf_uncertainty(exact_upper=False)
             value -= float(part1._p / mergedPart._p) * part1.cdf_uncertainty()
             value -= float(part2._p / mergedPart._p) * part2.cdf_uncertainty()
@@ -278,6 +288,7 @@ class RandomVariable:
                 currentPart = nextPart
                 i += 1
 
+            # we want to merge the parts with a small heuristic value to change the least amount possible
             sortedBounds = sorted(mergeBounds)
             bound = sortedBounds[-goalPartCount]
 
